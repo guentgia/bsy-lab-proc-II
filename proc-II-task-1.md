@@ -1,7 +1,8 @@
 # Task 1 – Understand Cgroups Version One
 
 ## Subtask 1.1 – Default System Configuration
-**Analyze the default cgroup configuration of Ubuntu. Which subsystems are supported by the Ubuntu kernel? Explain the output.**
+
+**a) Analyze the default cgroup configuration of Ubuntu. Which subsystems are supported by the Ubuntu kernel? Explain the output.**
 
 How to list the supported subsystems:
 ```console
@@ -23,6 +24,13 @@ pids           12         98           1
 rdma           2          1            1
 ```
 
+Columns:
+- subsys_name: The name of the cgroup subsystem
+- hierarchy: The hierarchy ID of the subsystem
+- num_cgroups: The number of cgroups currently in use for the subsystem
+- enabled: Whether or not the subsystem is enabled in the kernel (1 = enabled, 0 = disabled)
+
+Some subsystem descriptions:
 - cpu: This subsystem controls CPU usage and can be used to limit the amount of CPU time that a cgroup or process can consume.
 - cpuset: This subsystem assigns CPUs and memory nodes to cgroups and processes, which can be useful in a multi-processor system.
 - memory: This subsystem manages memory usage and can be used to limit the amount of memory that a cgroup or process can consume.
@@ -56,11 +64,31 @@ dr-xr-xr-x  2 root root   0 Mar 30 18:48 rdma
 dr-xr-xr-x  5 root root   0 Mar 30 18:48 systemd
 dr-xr-xr-x  5 root root   0 Mar 30 18:48 unified
 ```
-**Which hierarchies are provided by default? Which subsystems are configured at which hierarchy?**
+**b) Which hierarchies are provided by default? Which subsystems are configured at which hierarchy?**
 
-TODO
+The file _/proc/self/mountinfo_ shows the mounted cgroup hierarchies and their associated subsystems:
 
-**Navigate to the default CPU hierarchy and check how many cgroups are present. What may be the purpose of these cgroups? Who created them? You may find the command systemd-cgls useful.**
+```console
+ubuntu@bsy-lab05:~$ cat /proc/self/mountinfo | grep cgroup
+35 26 0:29 / /sys/fs/cgroup ro,nosuid,nodev,noexec shared:9 - tmpfs tmpfs ro,mode=755
+36 35 0:30 / /sys/fs/cgroup/unified rw,nosuid,nodev,noexec,relatime shared:10 - cgroup2 cgroup2 rw,nsdelegate
+37 35 0:31 / /sys/fs/cgroup/systemd rw,nosuid,nodev,noexec,relatime shared:11 - cgroup cgroup rw,xattr,name=systemd
+40 35 0:34 / /sys/fs/cgroup/rdma rw,nosuid,nodev,noexec,relatime shared:15 - cgroup cgroup rw,rdma
+41 35 0:35 / /sys/fs/cgroup/cpu,cpuacct rw,nosuid,nodev,noexec,relatime shared:16 - cgroup cgroup rw,cpu,cpuacct
+42 35 0:36 / /sys/fs/cgroup/cpuset rw,nosuid,nodev,noexec,relatime shared:17 - cgroup cgroup rw,cpuset
+43 35 0:37 / /sys/fs/cgroup/perf_event rw,nosuid,nodev,noexec,relatime shared:18 - cgroup cgroup rw,perf_event
+44 35 0:38 / /sys/fs/cgroup/devices rw,nosuid,nodev,noexec,relatime shared:19 - cgroup cgroup rw,devices
+45 35 0:39 / /sys/fs/cgroup/blkio rw,nosuid,nodev,noexec,relatime shared:20 - cgroup cgroup rw,blkio
+46 35 0:40 / /sys/fs/cgroup/freezer rw,nosuid,nodev,noexec,relatime shared:21 - cgroup cgroup rw,freezer
+47 35 0:41 / /sys/fs/cgroup/net_cls,net_prio rw,nosuid,nodev,noexec,relatime shared:22 - cgroup cgroup rw,net_cls,net_prio
+48 35 0:42 / /sys/fs/cgroup/hugetlb rw,nosuid,nodev,noexec,relatime shared:23 - cgroup cgroup rw,hugetlb
+49 35 0:43 / /sys/fs/cgroup/memory rw,nosuid,nodev,noexec,relatime shared:24 - cgroup cgroup rw,memory
+50 35 0:44 / /sys/fs/cgroup/pids rw,nosuid,nodev,noexec,relatime shared:25 - cgroup cgroup rw,pids
+```
+
+Each cgroup hierarchy can support multiple subsystems. For example, the cpu hierarchy can support both cpu and cpuacct subsystems.
+
+**c) Navigate to the default CPU hierarchy and check how many cgroups are present. What may be the purpose of these cgroups? Who created them? You may find the command systemd-cgls useful.**
 
 ```console
 $ cd /sys/fs/cgroup/cpu
@@ -122,9 +150,9 @@ Controller cpu; Control group /:
 
 The purpose of these cgroups is to manage CPU resource allocation and utilization for different processes and groups of processes. By creating separate cgroups for different processes or groups of processes, system administrators can enforce resource limits, prioritize CPU usage, and prevent certain processes from consuming too much CPU time and impacting system performance.
 
-The cgroups under the CPU hierarchy can be created by different system components, such as systemd or other process management tools. Depending on the system configuration and workload, there may be multiple cgroups present under the CPU hierarchy, each serving a specific purpose or grouping of processes.
+The cgroups under the CPU hierarchy can be created by different system components, such as systemd or other process management tools.
 
-**How many processes are in cgroup user.slice/system.slice/init.slice?**
+**d) How many processes are in cgroup user.slice/system.slice/init.slice?**
 
 - user.slice: 9
 - system.slice: 19
@@ -139,7 +167,7 @@ $ /sys/fs/cgroup/cpu$ systemd-cgls /system.slice | grep "├─" | wc -l
 19
 ```
 
-**Run the following commands and explain the output: ps xawf -eo pid,user,cgroup,args**
+**e) Run the following commands and explain the output: ps xawf -eo pid,user,cgroup,args**
 
 ```console
 $ ps xawf -eo pid,user,cgroup,args
@@ -263,12 +291,12 @@ $ ps xawf -eo pid,user,cgroup,args
 The command lists all running processes along with their PID, username of the creator, cgroup name and command line arguments for starting the process.
 
 The options xawf specify the following:
-- x: list all processes when used together with the a option
+- x: list all processes when used together with the _a_ option
 - a: include processes from all users
 - w: wide output format
 - f: full format display
 
-**Check the configuration for a process called “cron” using “ps” and “grep”. Explain both, the configuration for the “cron” and “ps” process, in terms of systemd and cgroup configuration.**
+**f) Check the configuration for a process called “cron” using “ps” and “grep”. Explain both, the configuration for the “cron” and “ps” process, in terms of systemd and cgroup configuration.**
 
 ```console
 $ ps aux | grep cron
@@ -277,33 +305,140 @@ ubuntu     15306  0.0  0.0   8160   736 pts/0    S+   09:26   0:00 grep --color=
 ```
 The output includes the PID, the username that started the process, the start time, the command line arguments.
 
-In terms of systemd and cgroup configuration, cron is usually started as a systemd service, and its configuration is managed through a unit file located at /lib/systemd/system/cron.service. This file specifies the configuration options for the cron service, including the cgroup settings.
+In terms of systemd and cgroup configuration, cron is usually started as a systemd service, and its configuration is managed through a unit file located at /lib/systemd/system/cron.service. This file specifies the configuration options for the cron service.
 
 By default, the cron process is usually started in the system.slice cgroup, which is managed by systemd. This cgroup contains system-level services and is a parent cgroup for other system service cgroups.
 
+
 ```console
-$ cat /lib/systemd/system/cron.service
-[Unit]
-Description=Regular background program processing daemon
-Documentation=man:cron(8)
-After=remote-fs.target nss-user-lookup.target
-
-[Service]
-EnvironmentFile=-/etc/default/cron
-ExecStart=/usr/sbin/cron -f $EXTRA_OPTS
-IgnoreSIGPIPE=false
-KillMode=process
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
+$ cat /proc/722/cgroup
+12:pids:/system.slice/cron.service
+11:memory:/system.slice/cron.service
+10:hugetlb:/
+9:net_cls,net_prio:/
+8:freezer:/
+7:blkio:/system.slice/cron.service
+6:devices:/system.slice/cron.service
+5:perf_event:/
+4:cpuset:/
+3:cpu,cpuacct:/system.slice/cron.service
+2:rdma:/
+1:name=systemd:/system.slice/cron.service
+0::/system.slice/cron.service
 ```
 
-**Verify your understanding by using the following commands: systemd-cgtop and systemd-cgls**
+This displays the cgroup hierarchy and subsystems associated with the "cron" process (with PID 722).
 
+**g) Verify your understanding by using the following commands: systemd-cgtop and systemd-cgls**
 
+systemd-cgtop:\
+Displays the current resource usage of cgroups in a hierarchical view:
+- Real-time overview of the CPU, memory, and IO usage of cgroups and their associated processes.
+- By default top-level cgroup hierarchy.
+
+```console
+$ systemd-cgtop
+Control Group                     Tasks   %CPU   Memory  Input/s Output/s
+user.slice                            6    2.3   119.2M        -        -
+/                                   148    1.0     1.2G        -        -
+system.slice                         55    0.1   959.7M        -        -
+system.slice/irqbalance.service       2    0.0   908.0K        -        -
+system.slice/multipathd.service       7    0.0    13.6M        -        -
+init.scope                            1      -     8.1M        -        -
+system.slice/accounts-daemon.service  3      -     8.6M        -        -
+system.slice/atd.service              1      -   640.0K        -        -
+system.slice/boot-efi.mount           -      -    36.0K        -        -
+system.slice/cloud-final.service      -      -     1.7M        -        -
+system.slice/cloud-init.service       -      -    14.4M        -        -
+system.slice/cron.service             1      -     5.5M        -        -
+...
+```
 
 **Can you identify the “cron” service?**
 
+To display the memory usage of cron.service one can run the following command:
+
+```console
+$ systemd-cgtop | grep cron
+system.slice/cron.service             1      -     5.3M        -        -
+```
+
+systemd-cgls\
+Displays (recursively) the cgroup hierarchy in a tree-like format, showing the parent-child relationships between cgroups.
+- It can be used to inspect the hierarchy and see the subsystems associated with each cgroup.
+- By default, systemd-cgls displays the entire cgroup hierarchy, use --unit|--user-unit [UNIT...] for showing a specific
+- By default, empty control groups are not shown, use --all for showing also empty ones.
+
+```console
+$ systemd-cgls
+Control group /:
+-.slice
+├─user.slice
+│ └─user-1000.slice
+│   ├─user@1000.service
+│   │ └─init.scope
+│   │   ├─21878 /lib/systemd/systemd --user
+│   │   └─21883 (sd-pam)
+│   └─session-158.scope
+│     ├─21865 sshd: ubuntu [priv]
+│     ├─21994 sshd: ubuntu@pts/0
+│     ├─21997 -bash
+│     ├─22083 systemd-cgls
+│     └─22084 pager
+├─init.scope
+│ └─1 /sbin/init
+└─system.slice
+  ├─irqbalance.service
+  │ └─736 /usr/sbin/irqbalance --foreground
+  ├─systemd-networkd.service
+  │ └─611 /lib/systemd/systemd-networkd
+  ├─systemd-udevd.service
+  │ └─403 /lib/systemd/systemd-udevd
+  ├─cron.service
+  │ └─722 /usr/sbin/cron -f
+  ├─system-serial\x2dgetty.slice
+  │ └─serial-getty@ttyS0.service
+  │   └─763 /sbin/agetty -o -p -- \u --keep-baud 115200,38400,9600 ttyS0 vt220
+  ├─polkit.service
+  │ └─800 /usr/lib/policykit-1/polkitd --no-debug
+  ├─networkd-dispatcher.service
+  │ └─738 /usr/bin/python3 /usr/bin/networkd-dispatcher --run-startup-triggers
+  ├─multipathd.service
+  │ └─503 /sbin/multipathd -d -s
+  ├─accounts-daemon.service
+  │ └─719 /usr/lib/accountsservice/accounts-daemon
+  ├─systemd-journald.service
+  │ └─367 /lib/systemd/systemd-journald
+  ├─atd.service
+  │ └─749 /usr/sbin/atd -f
+  ├─ssh.service
+  │ └─854 sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups
+  ├─snapd.service
+  │ └─13758 /usr/lib/snapd/snapd
+  ├─rsyslog.service
+  │ └─744 /usr/sbin/rsyslogd -n -iNONE
+  ├─systemd-resolved.service
+  │ └─628 /lib/systemd/systemd-resolved
+  ├─udisks2.service
+  │ └─748 /usr/lib/udisks2/udisksd
+  ├─dbus.service
+  │ └─728 /usr/bin/dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only
+  ├─systemd-timesyncd.service
+  │ └─536 /lib/systemd/systemd-timesyncd
+  ├─system-getty.slice
+  │ └─getty@tty1.service
+  │   └─769 /sbin/agetty -o -p -- \u --noclear tty1 linux
+  └─systemd-logind.service
+    └─746 /lib/systemd/systemd-logind
+```
+
+**Can you identify the “cron” service?**
+
+```console
+$ systemd-cgls --unit cron.service
+Unit cron.service (/system.slice/cron.service):
+└─722 /usr/sbin/cron -f
+```
 
 ## Subtask 1.2 – Default System Configuration by Systemd
+
