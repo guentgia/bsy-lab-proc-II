@@ -442,3 +442,82 @@ Unit cron.service (/system.slice/cron.service):
 
 ## Subtask 1.2 – Default System Configuration by Systemd
 
+**a) Obviously, systemd creates a number of cgroups. Identify the respective unit files and explain their configuration.**
+
+- user.slice: This cgroup is the parent of all user session and user-related processes. Its associated unit file is /lib/systemd/system/user.slice. This unit file defines various settings for the user slice, such as CPUShares, MemoryLimit, and IOAccounting.
+
+- init.scope: This cgroup is the parent of all user sessions and processes. Its associated unit file is /lib/systemd/system/init.scope. This unit file defines various settings for the init scope, such as CPUShares, MemoryLimit, and IOAccounting.
+
+- system.slice: This cgroup is the parent of all system services and processes. Its associated unit file is /lib/systemd/system/system.slice. This unit file defines various settings for the system slice, such as CPUShares, MemoryLimit, and IOAccounting.
+
+**b) Modify the user.slice configuration such that all processes created by users do not receive more than 20% of CPU share. Verify your configuration by creating more load than your system can handle, e.g. by creating a number of “wc /dev/zero &” background processes (& send the process directly into the background). You may find man man systemd.resource-control useful. What happened to the “cron” process?**
+
+```console
+$ cat /lib/systemd/system/user.slice
+[Unit]
+Description=User and Session Slice
+Documentation=man:systemd.special(7)
+Before=slices.target
+```
+
+How to modify the unit file:
+
+1. Open the file in an editor.
+```console
+sudo nano /lib/systemd/system/user.slice
+```
+
+2. Set the CPU quota for the user.slice to 20%, meaning that any processes running in this cgroup will be limited to using no more than 20% of the CPU.
+```console
+[Slice]
+CPUQuota=20%
+```
+
+3. Reload the systemd daemon to apply the changes.
+```console
+$ sudo systemctl daemon-reload
+```
+
+4. Test the configuration by creating more load than your system can handle.
+```console
+$ wc /dev/zero &
+```
+
+As for the "cron" process, it should not be affected by the changes to the user.slice configuration, since it runs in a separate cgroup. The changes we made only affect processes running in the user.slice cgroup. However, if the "cron" process is running as a user-level process (rather than as a system service), then it would be subject to the same CPU quota limit as other user-level processes.
+
+**c) Free one wc process from the limits imposed by the user.slice related cgroup.**
+
+1. Move the process to a different cgroup using the systemd-run command. For example, you can run:
+
+```console
+$ sudo systemd-run -p CPUAccounting=false -p CPUQuota=100% wc /dev/zero
+```
+
+This command creates a new transient unit for a wc /dev/zero process and sets the CPUQuota parameter to 100%, effectively removing the CPU limit imposed by the user.slice cgroup.
+
+3. Verify that the process has been moved to the new cgroup by checking its cgroup using the cat /proc/<PID>/cgroup command. The output should show the new cgroup that you specified in the systemd-run command.
+
+```console
+PID   USER    PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+22403 root    20   0    7240    660    592 R 100.0   0.0   1:23.40 wc
+22327 ubuntu  20   0    7240    656    592 R   5.8   0.0   0:25.02 wc
+22334 ubuntu  20   0    7240    596    528 R   1.0   0.0   0:14.34 wc
+22255 ubuntu  20   0    7240    656    592 R   0.6   0.0   0:18.33 wc
+```
+
+```console
+$ cat /proc/22403/cgroup
+12:pids:/system.slice/run-r911bb82d8a624dc886f7b79d8c1f7853.service
+11:memory:/system.slice/run-r911bb82d8a624dc886f7b79d8c1f7853.service
+10:hugetlb:/
+9:net_cls,net_prio:/
+8:freezer:/
+7:blkio:/system.slice/run-r911bb82d8a624dc886f7b79d8c1f7853.service
+6:devices:/system.slice/run-r911bb82d8a624dc886f7b79d8c1f7853.service
+5:perf_event:/
+4:cpuset:/
+3:cpu,cpuacct:/system.slice/run-r911bb82d8a624dc886f7b79d8c1f7853.service
+2:rdma:/
+1:name=systemd:/system.slice/run-r911bb82d8a624dc886f7b79d8c1f7853.service
+0::/system.slice/run-r911bb82d8a624dc886f7b79d8c1f7853.service
+```
