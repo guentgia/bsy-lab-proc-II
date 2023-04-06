@@ -92,3 +92,4 @@ $ lscpu
 ```
 
 The processes will get migrated to cpu that is still available. if no CPUs are available in the cpuset the processes will not be able to execute until cpu becomes available.
+The set default core however cannot be disabled so processes can still run.
