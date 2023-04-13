@@ -154,18 +154,33 @@ The cgroups under the CPU hierarchy can be created by different system component
 
 **d) How many processes are in cgroup user.slice/system.slice/init.slice?**
 
-- user.slice: 9
-- system.slice: 19
-- init.slice: 1
-
-Count from the tree in previous view or pipe grep:
+Check status of slice:
 
 ```console
-$ systemd-cgls /user.slice | grep "├─" | wc -l
-9
-$ /sys/fs/cgroup/cpu$ systemd-cgls /system.slice | grep "├─" | wc -l
-19
+$ systemctl status user.slice
+● user.slice - User and Session Slice
+     Loaded: loaded (/lib/systemd/system/user.slice; static; vendor preset: enabled)
+     Active: active since Thu 2023-04-13 15:49:05 UTC; 2min 14s ago
+       Docs: man:systemd.special(7)
+      Tasks: 7
+     Memory: 219.8M
+     CGroup: /user.slice
+             └─user-1000.slice
+               ├─session-1.scope
+               │ ├─1383 sshd: ubuntu [priv]
+               │ ├─1516 sshd: ubuntu@pts/0
+               │ ├─1517 -bash
+               │ ├─1536 systemctl status user.slice
+               │ └─1537 pager
+               └─user@1000.service
+                 └─init.scope
+                   ├─1402 /lib/systemd/systemd --user
+                   └─1407 (sd-pam)
 ```
+
+- user.slice: 7
+- system.slice: 57
+- init.slice: inactive (dead)
 
 **e) Run the following commands and explain the output: ps xawf -eo pid,user,cgroup,args**
 
@@ -298,36 +313,24 @@ The options xawf specify the following:
 
 **f) Check the configuration for a process called “cron” using “ps” and “grep”. Explain both, the configuration for the “cron” and “ps” process, in terms of systemd and cgroup configuration.**
 
-```console
-$ ps aux | grep cron
-root         722  0.0  0.0   8536  2868 ?        Ss   Mar30   0:00 /usr/sbin/cron -f
-ubuntu     15306  0.0  0.0   8160   736 pts/0    S+   09:26   0:00 grep --color=auto cron
-```
-The output includes the PID, the username that started the process, the start time, the command line arguments.
-
-In terms of systemd and cgroup configuration, cron is usually started as a systemd service, and its configuration is managed through a unit file located at /lib/systemd/system/cron.service. This file specifies the configuration options for the cron service.
-
-By default, the cron process is usually started in the system.slice cgroup, which is managed by systemd. This cgroup contains system-level services and is a parent cgroup for other system service cgroups.
-
+Check cron:
 
 ```console
-$ cat /proc/722/cgroup
-12:pids:/system.slice/cron.service
-11:memory:/system.slice/cron.service
-10:hugetlb:/
-9:net_cls,net_prio:/
-8:freezer:/
-7:blkio:/system.slice/cron.service
-6:devices:/system.slice/cron.service
-5:perf_event:/
-4:cpuset:/
-3:cpu,cpuacct:/system.slice/cron.service
-2:rdma:/
-1:name=systemd:/system.slice/cron.service
-0::/system.slice/cron.service
+$ ps xawf -eo pid,user,cgroup,args | grep cron
+    723 root     10:memory:/system.slice/cro /usr/sbin/cron -f
+   1571 ubuntu   10:memory:/user.slice/user-              \_ grep --color=auto cron
 ```
+-> system.slice
 
-This displays the cgroup hierarchy and subsystems associated with the "cron" process (with PID 722).
+Check ps:
+
+```console
+$ ps xawf -eo pid,user,cgroup,args | grep ps
+    867 root     10:memory:/system.slice/ssh sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups
+   1572 ubuntu   10:memory:/user.slice/user-              \_ ps xawf -eo pid,user,cgroup,args
+   1573 ubuntu   10:memory:/user.slice/user-              \_ grep --color=auto ps
+```
+-> user.slice
 
 **g) Verify your understanding by using the following commands: systemd-cgtop and systemd-cgls**
 
@@ -444,49 +447,94 @@ Unit cron.service (/system.slice/cron.service):
 
 **a) Obviously, systemd creates a number of cgroups. Identify the respective unit files and explain their configuration.**
 
-- user.slice: This cgroup is the parent of all user session and user-related processes. Its associated unit file is /lib/systemd/system/user.slice. This unit file defines various settings for the user slice, such as CPUShares, MemoryLimit, and IOAccounting.
+Command to list all the slice units loaded in the system:
 
-- init.scope: This cgroup is the parent of all user sessions and processes. Its associated unit file is /lib/systemd/system/init.scope. This unit file defines various settings for the init scope, such as CPUShares, MemoryLimit, and IOAccounting.
+```console
+$ systemctl list-units --type slice
+  UNIT                         LOAD   ACTIVE SUB    DESCRIPTION
+  -.slice                      loaded active active Root Slice
+  system-getty.slice           loaded active active system-getty.slice
+  system-modprobe.slice        loaded active active system-modprobe.slice
+  system-serial\x2dgetty.slice loaded active active system-serial\x2dgetty.slice
+  system-systemd\x2dfsck.slice loaded active active system-systemd\x2dfsck.slice
+  system.slice                 loaded active active System Slice
+  user-1000.slice              loaded active active User Slice of UID 1000
+  user.slice                   loaded active active User and Session Slice
+  ...
+```
 
-- system.slice: This cgroup is the parent of all system services and processes. Its associated unit file is /lib/systemd/system/system.slice. This unit file defines various settings for the system slice, such as CPUShares, MemoryLimit, and IOAccounting.
+- -.slice: This is the root slice of the systemd hierarchy, which includes all other slices and units.
+
+- system-getty.slice: This slice includes all the getty processes that are used to provide console access to the system. It is managed by the getty@.service unit, which starts a getty process for each virtual console.
+
+- system-modprobe.slice: This slice includes all the modprobe processes that are used to load kernel modules. It is managed by the systemd-modules-load.service unit, which loads kernel modules at boot time.
+
+- system-serial\x2dgetty.slice: This slice includes all the serial getty processes that are used to provide serial console access to the system. It is managed by the serial-getty@.service unit, which starts a getty process for each serial console.
+
+- system-systemd\x2dfsck.slice: This slice includes the systemd-fsck-root.service unit, which runs a file system check on the root file system during system boot.
+
+- system.slice: This slice includes all the system services and processes that are not associated with a specific user. It is managed by various system services, including systemd-journald.service, systemd-udevd.service, and dbus.service, among others.
+
+- user-1000.slice: This slice includes all the processes and services associated with user ID 1000. It is managed by the user@1000.service unit, which starts user-specific services and processes.
+
+- user.slice: This slice includes all the processes and services associated with any user on the system. It is managed by the user@.service unit, which starts user-specific services and processes for any user that logs in.
+
+Bonus:\
+The init.scope slice is created by systemd at boot time and provides a separate resource management environment for the system initialization process. This allows systemd to manage the initialization process in a controlled and efficient manner, and to ensure that critical system services and processes are started in the correct order.
+
+It is also used to manage system shutdown and reboot operations. When the system is shut down or rebooted, systemd sends a signal to the init process to trigger the shutdown sequence. This allows systemd to coordinate the shutdown of all running processes and services in a controlled and graceful manner.
 
 **b) Modify the user.slice configuration such that all processes created by users do not receive more than 20% of CPU share. Verify your configuration by creating more load than your system can handle, e.g. by creating a number of “wc /dev/zero &” background processes (& send the process directly into the background). You may find man man systemd.resource-control useful. What happened to the “cron” process?**
 
+To modify the CPU share limit for processes in the user.slice cgroup without directly modifying the default configuration file user.slice, one can create a custom systemd service file in the /etc/systemd/system directory:
+
+1. Create a new file in the /etc/systemd/system directory with a name ending in .slice.conf, for example custom-user.slice.conf.
+
 ```console
-$ cat /lib/systemd/system/user.slice
+$ sudo nano /etc/systemd/system/custom-user.slice.conf
+```
+
+3. Add the following content:
+```
 [Unit]
-Description=User and Session Slice
-Documentation=man:systemd.special(7)
-Before=slices.target
-```
+Description=Custom User Slice
 
-How to modify the unit file:
-
-1. Open the file in an editor.
-```console
-sudo nano /lib/systemd/system/user.slice
-```
-
-2. Set the CPU quota for the user.slice to 20%, meaning that any processes running in this cgroup will be limited to using no more than 20% of the CPU.
-```console
 [Slice]
 CPUQuota=20%
 ```
 
-3. Reload the systemd daemon to apply the changes.
+4. Save the file and exit the text editor.
+5. Reload the systemd configuration to apply the changes:
 ```console
 $ sudo systemctl daemon-reload
 ```
-
-4. Test the configuration by creating more load than your system can handle.
+6. Test the configuration by creating more load than your system can handle.
 ```console
 $ wc /dev/zero &
+```
+
+Checking the CPU shares:
+```console
+$ top
+...
+PID  USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+1789 ubuntu    20   0    7240    656    592 R   6.5   0.0   0:01.49 wc
+1790 ubuntu    20   0    7240    652    588 R   6.5   0.0   0:01.21 wc
+1786 ubuntu    20   0    7240    660    592 R   2.1   0.0   0:01.41 wc
+1788 ubuntu    20   0    7240    652    588 R   2.1   0.0   0:00.61 wc
+1787 ubuntu    20   0    7240    656    588 R   1.8   0.0   0:00.66 wc
+1791 ubuntu    20   0    7240    656    592 R   1.5   0.0   0:00.44 wc
+   1 root      20   0  104960  12632   8352 S   0.0   0.2   0:03.18 systemd
+   2 root      20   0       0      0      0 S   0.0   0.0   0:00.00 kthreadd
+   3 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 rcu_gp
+...
 ```
 
 As for the "cron" process, it should not be affected by the changes to the user.slice configuration, since it runs in a separate cgroup. The changes we made only affect processes running in the user.slice cgroup. However, if the "cron" process is running as a user-level process (rather than as a system service), then it would be subject to the same CPU quota limit as other user-level processes.
 
 **c) Free one wc process from the limits imposed by the user.slice related cgroup.**
 
+First solution:
 1. Move the process to a different cgroup using the systemd-run command. For example, you can run:
 
 ```console
@@ -520,4 +568,12 @@ $ cat /proc/22403/cgroup
 2:rdma:/
 1:name=systemd:/system.slice/run-r911bb82d8a624dc886f7b79d8c1f7853.service
 0::/system.slice/run-r911bb82d8a624dc886f7b79d8c1f7853.service
+```
+Second posible solution:
+1. Choose the PID of the wc process that you want to free from the limits imposed by the cgroup -> 1789.
+
+2. Run the following command to move the chosen wc process out of the user.slice cgroup and into the default cgroup:
+
+```console
+$ sudo sh -c 'echo 1789 > /sys/fs/cgroup/cpu/user.slice/cgroup.procs'
 ```
