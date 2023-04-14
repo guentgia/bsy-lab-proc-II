@@ -72,7 +72,7 @@ dr-xr-xr-x  5 root root   0 Mar 30 18:48 unified
 The file _/proc/self/mountinfo_ shows the mounted cgroup hierarchies and their associated subsystems:
 
 ```console
-ubuntu@bsy-lab05:~$ cat /proc/self/mountinfo | grep cgroup
+$ cat /proc/self/mountinfo | grep cgroup
 35 26 0:29 / /sys/fs/cgroup ro,nosuid,nodev,noexec shared:9 - tmpfs tmpfs ro,mode=755
 36 35 0:30 / /sys/fs/cgroup/unified rw,nosuid,nodev,noexec,relatime shared:10 - cgroup2 cgroup2 rw,nsdelegate
 37 35 0:31 / /sys/fs/cgroup/systemd rw,nosuid,nodev,noexec,relatime shared:11 - cgroup cgroup rw,xattr,name=systemd
@@ -204,7 +204,7 @@ $ ps xawf -eo pid,user,cgroup,args
      16 root     -                            \_ [idle_inject/1]
      17 root     -                            \_ [migration/1]
      18 root     -                            \_ [ksoftirqd/1]
-     20 root     -                            \_ [kworker/1:0H]
+     20 root     -                            \_ [kworker/1:0H-kblockd]
      21 root     -                            \_ [cpuhp/2]
      22 root     -                            \_ [idle_inject/2]
      23 root     -                            \_ [migration/2]
@@ -234,76 +234,74 @@ $ ps xawf -eo pid,user,cgroup,args
      96 root     -                            \_ [edac-poller]
      97 root     -                            \_ [devfreq_wq]
      98 root     -                            \_ [watchdogd]
-    102 root     -                            \_ [kswapd0]
-    103 root     -                            \_ [ecryptfs-kthrea]
-    105 root     -                            \_ [kthrotld]
-    106 root     -                            \_ [acpi_thermal_pm]
+    101 root     -                            \_ [kswapd0]
+    102 root     -                            \_ [ecryptfs-kthrea]
+    104 root     -                            \_ [kthrotld]
+    105 root     -                            \_ [acpi_thermal_pm]
     107 root     -                            \_ [scsi_eh_0]
     108 root     -                            \_ [scsi_tmf_0]
     109 root     -                            \_ [scsi_eh_1]
     110 root     -                            \_ [scsi_tmf_1]
     112 root     -                            \_ [vfio-irqfd-clea]
     113 root     -                            \_ [ipv6_addrconf]
-    122 root     -                            \_ [kstrp]
-    125 root     -                            \_ [kworker/u9:0]
-    138 root     -                            \_ [charger_manager]
-    188 root     -                            \_ [cryptd]
-    252 root     -                            \_ [raid5wq]
-    292 root     -                            \_ [jbd2/vda1-8]
-    293 root     -                            \_ [ext4-rsv-conver]
-    328 root     -                            \_ [hwrng]
-    352 root     -                            \_ [kworker/2:1H-kblockd]
-    388 root     -                            \_ [kworker/0:1H-kblockd]
-    399 root     -                            \_ [kworker/3:1H-kblockd]
-    400 root     -                            \_ [kworker/1:1H-kblockd]
+    123 root     -                            \_ [kstrp]
+    126 root     -                            \_ [kworker/u9:0]
+    139 root     -                            \_ [charger_manager]
+    185 root     -                            \_ [cryptd]
+    251 root     -                            \_ [raid5wq]
+    291 root     -                            \_ [jbd2/vda1-8]
+    292 root     -                            \_ [ext4-rsv-conver]
+    327 root     -                            \_ [hwrng]
+    351 root     -                            \_ [kworker/2:1H-kblockd]
+    387 root     -                            \_ [kworker/1:1H-kblockd]
+    398 root     -                            \_ [kworker/3:1H-kblockd]
     499 root     -                            \_ [kaluad]
     500 root     -                            \_ [kmpath_rdacd]
     501 root     -                            \_ [kmpathd]
     502 root     -                            \_ [kmpath_handlerd]
-    513 root     -                            \_ [loop0]
-    516 root     -                            \_ [loop1]
-   1643 root     -                            \_ [kworker/0:0-events]
-   1768 root     -                            \_ [kworker/2:3-events_freezable]
-  13585 root     -                            \_ [loop3]
-  13719 root     -                            \_ [loop4]
-  13756 root     -                            \_ [kworker/1:0-cgroup_destroy]
-  14112 root     -                            \_ [loop5]
-  14204 root     -                            \_ [kworker/2:1-rcu_gp]
-  14402 root     -                            \_ [kworker/3:0-events]
-  14641 root     -                            \_ [kworker/0:1-cgroup_destroy]
-  14777 root     -                            \_ [kworker/3:2]
-  15153 root     -                            \_ [kworker/1:1-events]
-  15230 root     -                            \_ [kworker/u8:0-events_unbound]
-  15240 root     -                            \_ [kworker/u8:1-events_power_efficient]
-      1 root     12:pids:/init.scope,11:memo /sbin/init
-    367 root     12:pids:/system.slice/syste /lib/systemd/systemd-journald
-    403 root     12:pids:/system.slice/syste /lib/systemd/systemd-udevd
-    503 root     12:pids:/system.slice/multi /sbin/multipathd -d -s
-    536 systemd+ 12:pids:/system.slice/syste /lib/systemd/systemd-timesyncd
-    611 systemd+ 12:pids:/system.slice/syste /lib/systemd/systemd-networkd
-    628 systemd+ 12:pids:/system.slice/syste /lib/systemd/systemd-resolved
-    719 root     12:pids:/system.slice/accou /usr/lib/accountsservice/accounts-daemon
-    722 root     12:pids:/system.slice/cron. /usr/sbin/cron -f
-    728 message+ 12:pids:/system.slice/dbus. /usr/bin/dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activat
-    736 root     12:pids:/system.slice/irqba /usr/sbin/irqbalance --foreground
-    738 root     12:pids:/system.slice/netwo /usr/bin/python3 /usr/bin/networkd-dispatcher --run-startup-triggers
-    744 syslog   12:pids:/system.slice/rsysl /usr/sbin/rsyslogd -n -iNONE
-    746 root     12:pids:/system.slice/syste /lib/systemd/systemd-logind
-    748 root     12:pids:/system.slice/udisk /usr/lib/udisks2/udisksd
-    749 daemon   12:pids:/system.slice/atd.s /usr/sbin/atd -f
-    763 root     12:pids:/system.slice/syste /sbin/agetty -o -p -- \u --keep-baud 115200,38400,9600 ttyS0 vt220
-    769 root     12:pids:/system.slice/syste /sbin/agetty -o -p -- \u --noclear tty1 linux
-    800 root     12:pids:/system.slice/polki /usr/lib/policykit-1/polkitd --no-debug
-    854 root     12:pids:/system.slice/ssh.s sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups
-  14620 root     12:pids:/user.slice/user-10  \_ sshd: ubuntu [priv]
-  14741 ubuntu   12:pids:/user.slice/user-10      \_ sshd: ubuntu@pts/0
-  14742 ubuntu   12:pids:/user.slice/user-10          \_ -bash
-  15247 ubuntu   12:pids:/user.slice/user-10              \_ systemd-cgls cpu
-  15248 ubuntu   12:pids:/user.slice/user-10              |   \_ pager
-  15302 ubuntu   12:pids:/user.slice/user-10              \_ ps xawf -eo pid,user,cgroup,args
-  13758 root     12:pids:/system.slice/snapd /usr/lib/snapd/snapd
-  14623 ubuntu   12:pids:/user.slice/user-10 /lib/systemd/systemd --user
-  14624 ubuntu   12:pids:/user.slice/user-10  \_ (sd-pam)
+    512 root     -                            \_ [loop0]
+    515 root     -                            \_ [loop1]
+    518 root     -                            \_ [kworker/0:1H-kblockd]
+   1700 root     -                            \_ [kworker/1:1-events]
+   1828 root     -                            \_ [kworker/1:0-cgroup_destroy]
+   1955 root     -                            \_ [loop3]
+   2360 root     -                            \_ [loop4]
+   2404 root     -                            \_ [kworker/0:3-events]
+   2529 root     -                            \_ [loop5]
+   2983 root     -                            \_ [kworker/u8:1-events_unbound]
+   2984 root     -                            \_ [kworker/u8:2-events_power_efficient]
+   3064 root     -                            \_ [kworker/2:0-events]
+  14808 root     -                            \_ [kworker/0:0-cgroup_destroy]
+  14855 root     -                            \_ [kworker/3:1-cgroup_destroy]
+  15106 root     -                            \_ [kworker/2:2-cgroup_destroy]
+  15111 root     -                            \_ [kworker/3:2-events]
+      1 root     10:memory:/init.scope,8:cpu /sbin/init
+    366 root     10:memory:/system.slice/sys /lib/systemd/systemd-journald
+    401 root     10:memory:/system.slice/sys /lib/systemd/systemd-udevd
+    503 root     10:memory:/system.slice/mul /sbin/multipathd -d -s
+    536 systemd+ 10:memory:/system.slice/sys /lib/systemd/systemd-timesyncd
+    613 systemd+ 10:memory:/system.slice/sys /lib/systemd/systemd-networkd
+    629 systemd+ 10:memory:/system.slice/sys /lib/systemd/systemd-resolved
+    720 root     10:memory:/system.slice/acc /usr/lib/accountsservice/accounts-daemon
+    723 root     10:memory:/system.slice/cro /usr/sbin/cron -f
+    724 message+ 10:memory:/system.slice/dbu /usr/bin/dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activat
+    731 root     10:memory:/system.slice/irq /usr/sbin/irqbalance --foreground
+    733 root     10:memory:/system.slice/net /usr/bin/python3 /usr/bin/networkd-dispatcher --run-startup-triggers
+    735 syslog   10:memory:/system.slice/rsy /usr/sbin/rsyslogd -n -iNONE
+    737 root     10:memory:/system.slice/sys /lib/systemd/systemd-logind
+    739 root     10:memory:/system.slice/udi /usr/lib/udisks2/udisksd
+    740 daemon   10:memory:/system.slice/atd /usr/sbin/atd -f
+    755 root     10:memory:/system.slice/sys /sbin/agetty -o -p -- \u --keep-baud 115200,38400,9600 ttyS0 vt220
+    767 root     10:memory:/system.slice/sys /sbin/agetty -o -p -- \u --noclear tty1 linux
+    792 root     10:memory:/system.slice/pol /usr/lib/policykit-1/polkitd --no-debug
+    867 root     10:memory:/system.slice/ssh sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups
+  14833 root     10:memory:/user.slice/user-  \_ sshd: ubuntu [priv]
+  14956 ubuntu   10:memory:/user.slice/user-      \_ sshd: ubuntu@pts/0
+  14957 ubuntu   10:memory:/user.slice/user-          \_ -bash
+  15118 ubuntu   10:memory:/user.slice/user-              \_ ps xawf -eo pid,user,cgroup,args
+   2002 root     10:memory:/system.slice/sna /usr/lib/snapd/snapd
+  14849 ubuntu   10:memory:/user.slice/user- /lib/systemd/systemd --user
+  14857 ubuntu   10:memory:/user.slice/user-  \_ (sd-pam)
 ```
 
 The command lists all running processes along with their PID, username of the creator, cgroup name and command line arguments for starting the process.
@@ -319,9 +317,8 @@ The options xawf specify the following:
 Check cron:
 
 ```console
-$ ps xawf -eo pid,user,cgroup,args | grep cron
-    723 root     10:memory:/system.slice/cro /usr/sbin/cron -f
-   1571 ubuntu   10:memory:/user.slice/user-              \_ grep --color=auto cron
+$ ps xawf -eo pid,user,cgroup | grep cron
+723 root     10:memory:/system.slice/cron.service,8:cpu,cpuacct:/system.slice/cron.service,6:blkio:/system.slice/cron.service,5:pids:/system.slice/cron.service,2:devices:/system.slice/cron.service,1:name=systemd:/system.slice/cron.service,0::/system.slice/cron.service
 ```
 -> system.slice
 
