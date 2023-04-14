@@ -491,7 +491,7 @@ To modify the CPU share limit for processes in the user.slice cgroup without dir
 1. Create a new file in the /etc/systemd/system directory with a name ending in .slice.conf, for example custom-user.slice.conf.
 
 ```console
-$ sudo nano /etc/systemd/system/custom-user.slice.conf
+$ sudo nano /etc/systemd/system/user.slice
 ```
 
 3. Add the following content:
